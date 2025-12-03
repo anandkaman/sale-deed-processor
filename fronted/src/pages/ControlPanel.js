@@ -30,6 +30,10 @@ const ControlPanel = () => {
   const [ocrPageWorkers, setOcrPageWorkers] = useState(2);  // OCR page workers
   const [systemConfig, setSystemConfig] = useState(null);  // System configuration
 
+  // Manual tracking for stop button states (always enabled once started)
+  const [isPdfProcessingActive, setIsPdfProcessingActive] = useState(false);
+  const [isVisionProcessingActive, setIsVisionProcessingActive] = useState(false);
+
   // Define callback functions first
   const fetchStats = useCallback(async () => {
     try {
@@ -41,10 +45,18 @@ const ControlPanel = () => {
       setProcessingStats(procStats);
       setVisionStats(visStats);
       setFolderStats(fStats);
+
+      // Update manual tracking based on backend status
+      if (procStats && !procStats.is_running && isPdfProcessingActive) {
+        setIsPdfProcessingActive(false);
+      }
+      if (visStats && !visStats.is_running && isVisionProcessingActive) {
+        setIsVisionProcessingActive(false);
+      }
     } catch (err) {
       console.error('Error fetching stats:', err);
     }
-  }, []);
+  }, [isPdfProcessingActive, isVisionProcessingActive]);
 
   const fetchSystemConfig = useCallback(async () => {
     try {
@@ -68,12 +80,24 @@ const ControlPanel = () => {
         api.getProcessingStats().catch(() => null),
         api.getVisionStats().catch(() => null),
       ]);
-      if (procStats) setProcessingStats(procStats);
-      if (visStats) setVisionStats(visStats);
+      if (procStats) {
+        setProcessingStats(procStats);
+        // Auto-disable stop button when backend reports not running
+        if (!procStats.is_running && isPdfProcessingActive) {
+          setIsPdfProcessingActive(false);
+        }
+      }
+      if (visStats) {
+        setVisionStats(visStats);
+        // Auto-disable stop button when backend reports not running
+        if (!visStats.is_running && isVisionProcessingActive) {
+          setIsVisionProcessingActive(false);
+        }
+      }
     } catch (err) {
       console.error('Error fetching active stats:', err);
     }
-  }, []);
+  }, [isPdfProcessingActive, isVisionProcessingActive]);
 
   const fetchFolderStats = useCallback(async () => {
     try {
@@ -96,8 +120,8 @@ const ControlPanel = () => {
 
   // Polling - only when processing is active
   useEffect(() => {
-    const isPdfProcessing = processingStats?.is_running;
-    const isVisionProcessing = visionStats?.is_running;
+    const isPdfProcessing = processingStats?.is_running || isPdfProcessingActive;
+    const isVisionProcessing = visionStats?.is_running || isVisionProcessingActive;
 
     if (isPdfProcessing || isVisionProcessing) {
       // Immediate fetch
@@ -111,7 +135,7 @@ const ControlPanel = () => {
       };
     }
     // No polling when idle - stats are only fetched on user actions
-  }, [processingStats?.is_running, visionStats?.is_running, fetchActiveStats]);
+  }, [processingStats?.is_running, visionStats?.is_running, isPdfProcessingActive, isVisionProcessingActive, fetchActiveStats]);
 
   const handleFileSelect = (e) => {
     const files = Array.from(e.target.files).filter((file) =>
@@ -178,6 +202,9 @@ const ControlPanel = () => {
       );
       if (result.success) {
         setUploadStatus({ ...result, type: 'processing' });
+        setIsPdfProcessingActive(true); // Enable stop button
+        // Immediate fetch to update stats
+        await fetchActiveStats();
       } else {
         setError(result.message);
       }
@@ -234,6 +261,7 @@ const ControlPanel = () => {
     try {
       const result = await api.stopProcessing();
       setUploadStatus({ ...result, type: 'stop' });
+      setIsPdfProcessingActive(false); // Disable stop button
       // Refresh stats after stopping
       await fetchStats();
     } catch (err) {
@@ -250,6 +278,9 @@ const ControlPanel = () => {
       const result = await api.startVisionProcessing();
       if (result.success) {
         setUploadStatus({ ...result, type: 'vision' });
+        setIsVisionProcessingActive(true); // Enable stop button
+        // Immediate fetch to update stats
+        await fetchActiveStats();
       } else {
         setError(result.message);
       }
@@ -266,6 +297,7 @@ const ControlPanel = () => {
     try {
       const result = await api.stopVisionProcessing();
       setUploadStatus({ ...result, type: 'stop-vision' });
+      setIsVisionProcessingActive(false); // Disable stop button
       // Refresh stats after stopping
       await fetchStats();
     } catch (err) {
@@ -292,6 +324,7 @@ const ControlPanel = () => {
             message: `${result.message}. Processing started automatically.`,
             type: 'rerun-and-process'
           });
+          setIsPdfProcessingActive(true); // Enable stop button
         }
       } else {
         setError(result.message || 'No failed PDFs to rerun');
@@ -430,7 +463,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={decreaseOcrWorkers}
-                disabled={loading || processingStats?.is_running || ocrWorkers <= 1}
+                disabled={loading || isPdfProcessingActive || ocrWorkers <= 1}
                 title="Decrease OCR workers"
               >
                 -
@@ -439,7 +472,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={increaseOcrWorkers}
-                disabled={loading || processingStats?.is_running || ocrWorkers >= 20}
+                disabled={loading || isPdfProcessingActive || ocrWorkers >= 20}
                 title="Increase OCR workers"
               >
                 +
@@ -453,7 +486,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={decreaseLlmWorkers}
-                disabled={loading || processingStats?.is_running || llmWorkers <= 1}
+                disabled={loading || isPdfProcessingActive || llmWorkers <= 1}
                 title="Decrease LLM workers"
               >
                 -
@@ -462,7 +495,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={increaseLlmWorkers}
-                disabled={loading || processingStats?.is_running || llmWorkers >= 20}
+                disabled={loading || isPdfProcessingActive || llmWorkers >= 20}
                 title="Increase LLM workers"
               >
                 +
@@ -482,7 +515,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={decreaseQueueSize}
-                disabled={loading || processingStats?.is_running || stage2QueueSize <= 1}
+                disabled={loading || isPdfProcessingActive || stage2QueueSize <= 1}
                 title="Decrease queue size"
               >
                 -
@@ -491,7 +524,7 @@ const ControlPanel = () => {
               <button
                 className="btn btn-sm btn-secondary"
                 onClick={increaseQueueSize}
-                disabled={loading || processingStats?.is_running || stage2QueueSize >= 10}
+                disabled={loading || isPdfProcessingActive || stage2QueueSize >= 10}
                 title="Increase queue size"
               >
                 +
@@ -506,7 +539,7 @@ const ControlPanel = () => {
                 type="checkbox"
                 checked={enableOcrMultiprocessing}
                 onChange={(e) => setEnableOcrMultiprocessing(e.target.checked)}
-                disabled={loading || processingStats?.is_running}
+                disabled={loading || isPdfProcessingActive}
                 className="checkbox-input"
               />
               Enable OCR Multiprocessing
@@ -521,7 +554,7 @@ const ControlPanel = () => {
                 <button
                   className="btn btn-sm btn-secondary"
                   onClick={decreaseOcrPageWorkers}
-                  disabled={loading || processingStats?.is_running || ocrPageWorkers <= 1}
+                  disabled={loading || isPdfProcessingActive || ocrPageWorkers <= 1}
                   title="Decrease OCR page workers"
                 >
                   -
@@ -530,7 +563,7 @@ const ControlPanel = () => {
                 <button
                   className="btn btn-sm btn-secondary"
                   onClick={increaseOcrPageWorkers}
-                  disabled={loading || processingStats?.is_running || ocrPageWorkers >= 8}
+                  disabled={loading || isPdfProcessingActive || ocrPageWorkers >= 8}
                   title="Increase OCR page workers"
                 >
                   +
@@ -545,7 +578,7 @@ const ControlPanel = () => {
           <button
             className="btn btn-success"
             onClick={handleStartProcessing}
-            disabled={loading || processingStats?.is_running}
+            disabled={loading || isPdfProcessingActive}
           >
             <Play size={20} />
             Start Processing
@@ -553,7 +586,7 @@ const ControlPanel = () => {
           <button
             className="btn btn-danger"
             onClick={handleStopProcessing}
-            disabled={loading || !processingStats?.is_running}
+            disabled={loading}
           >
             <Square size={20} />
             Stop Processing
@@ -561,7 +594,7 @@ const ControlPanel = () => {
           <button
             className="btn btn-warning"
             onClick={handleRerunFailed}
-            disabled={loading || processingStats?.is_running || (folderStats?.failed || 0) === 0}
+            disabled={loading || isPdfProcessingActive || (folderStats?.failed || 0) === 0}
             title="Rerun failed PDFs"
           >
             <RefreshCw size={20} />
@@ -581,7 +614,7 @@ const ControlPanel = () => {
         {processingStats && (
           <div className="stats-section">
             <div className="status-badge">
-              {processingStats.is_running ? (
+              {processingStats.is_running || isPdfProcessingActive ? (
                 <span className="badge running">
                   <Loader className="spin" size={16} />
                   Processing...
@@ -648,7 +681,7 @@ const ControlPanel = () => {
           <button
             className="btn btn-success"
             onClick={handleStartVision}
-            disabled={loading || visionStats?.is_running}
+            disabled={loading || isVisionProcessingActive}
           >
             <Eye size={20} />
             Start Vision
@@ -656,7 +689,7 @@ const ControlPanel = () => {
           <button
             className="btn btn-danger"
             onClick={handleStopVision}
-            disabled={loading || !visionStats?.is_running}
+            disabled={loading}
           >
             <Square size={20} />
             Stop Vision
@@ -666,7 +699,7 @@ const ControlPanel = () => {
         {visionStats && (
           <div className="stats-section">
             <div className="status-badge">
-              {visionStats.is_running ? (
+              {visionStats.is_running || isVisionProcessingActive ? (
                 <span className="badge running">
                   <Loader className="spin" size={16} />
                   Processing...
