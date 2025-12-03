@@ -1,0 +1,22 @@
+PLACEHOLDER FOR ICON
+
+To add a custom icon for the application:
+1. Create or obtain a 512x512 PNG icon
+2. Save it as: public/icon.png
+3. Delete this file (icon.png.txt)
+
+Recommended icon themes:
+- Document/File icon with "SD" text
+- Property/House icon
+- Legal document icon
+- Indian flag colors theme (optional)
+
+Online icon resources:
+- https://www.flaticon.com/
+- https://icons8.com/
+- https://www.iconfinder.com/
+
+Or create custom icon using:
+- Adobe Illustrator
+- Figma
+- Inkscape (free)

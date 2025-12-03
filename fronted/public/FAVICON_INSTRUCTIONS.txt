@@ -1,0 +1,64 @@
+HOW TO CHANGE THE WINDOWS TASKBAR & BROWSER TAB ICON
+=====================================================
+
+The icon you see in the Windows taskbar and browser tab is called a "favicon".
+
+CURRENT SETUP:
+--------------
+✓ You already have logo.png in this folder
+✓ The HTML is configured to use it as favicon
+
+STEPS TO SEE THE ICON:
+----------------------
+
+1. CREATE A FAVICON.ICO FILE (Recommended for Windows)
+
+   Option A - Use an online converter (EASIEST):
+   - Go to: https://favicon.io/favicon-converter/
+   - Upload your logo.png file
+   - Download the generated files
+   - You'll get: favicon.ico, favicon-16x16.png, favicon-32x32.png
+   - Copy ALL these files to: d:\saledeed_2025\fronted\public\
+
+   Option B - Use a tool:
+   - Use GIMP, Photoshop, or online tool to convert logo.png to favicon.ico
+   - Save as: d:\saledeed_2025\fronted\public\favicon.ico
+
+2. CLEAR BROWSER CACHE
+   - Press Ctrl + Shift + Delete
+   - Clear cached images and files
+   - Or use Incognito/Private mode to test
+
+3. RESTART THE REACT APP
+   - Stop the server (Ctrl + C)
+   - Run: npm start
+   - The new icon should appear in browser tab
+
+4. FOR WINDOWS TASKBAR ICON
+   - The browser's favicon will be used when you pin the app
+   - Close all browser windows of the app
+   - Clear browser cache
+   - Restart browser and open the app
+   - Pin to taskbar - it should now show your AI DOC PROCESS icon
+
+RECOMMENDED FILES IN public/ FOLDER:
+------------------------------------
+favicon.ico           (For Windows, IE, old browsers)
+favicon-16x16.png     (Small icon)
+favicon-32x32.png     (Medium icon)
+logo.png              (Your main logo - already exists ✓)
+apple-touch-icon.png  (For iOS/Mac - optional)
+
+WHY YOU MIGHT NOT SEE CHANGES:
+------------------------------
+- Browser cache (clear it!)
+- Old favicon is cached by Windows
+- Need to restart browser completely
+- Development server needs restart
+
+QUICK TEST:
+-----------
+After adding favicon.ico, visit:
+http://localhost:3000/favicon.ico
+
+If you see your icon, it's working! Just clear cache to see it in the tab.

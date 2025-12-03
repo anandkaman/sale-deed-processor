@@ -1,0 +1,27 @@
+INSTRUCTIONS TO ADD YOUR AI DOC PROCESS LOGO
+==============================================
+
+1. Save the AI DOC PROCESS icon image (the one with circuit board document and AI brain with magnifying glass)
+   as: logo.png
+
+2. Place it in this folder: d:\saledeed_2025\fronted\public\
+
+3. Image specifications:
+   - Format: PNG (with transparent background preferred)
+   - Size: 512x512 pixels (recommended) or 1024x1024 pixels
+   - The image will be displayed at 48x48 pixels in a circular crop
+   - Make sure the important parts of the icon are centered
+
+4. After saving the logo:
+   - The header will show the circular logo icon
+   - The browser tab will show the favicon
+   - Delete this instruction file
+
+5. Restart the React development server to see the changes:
+   cd fronted
+   npm start
+
+Current setup:
+- Header logo: Uses /logo.png with circular crop (48x48px)
+- Favicon: Uses /logo.png
+- App title: "AI DOC PROCESS"
