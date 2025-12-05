@@ -66,11 +66,6 @@ sale_deed_processor/data/vision_failed/*.jpg
 !sale_deed_processor/data/left_over_reg_fee/.gitkeep
 !sale_deed_processor/data/vision_failed/.gitkeep
 
-# Models (large YOLO/ONNX files)
-sale_deed_processor/models/*.onnx
-sale_deed_processor/models/*.pt
-sale_deed_processor/models/*.pth
-
 # Node modules
 node_modules/
 

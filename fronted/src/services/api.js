@@ -47,6 +47,11 @@ class ApiService {
     return response.data;
   }
 
+  async toggleEmbeddedOcr(enabled) {
+    const response = await this.client.post(`/process/toggle-embedded-ocr?enabled=${enabled}`);
+    return response.data;
+  }
+
   async getProcessingStats() {
     const response = await this.client.get('/process/stats');
     return response.data;

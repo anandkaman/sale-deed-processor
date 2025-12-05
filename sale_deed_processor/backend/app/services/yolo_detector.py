@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 class YOLOTableDetector:
-    def __init__(self, model_path: str, conf_threshold: float = 0.65):
+    def __init__(self, model_path: str, conf_threshold: float = 0.80):
         """
         Initialize YOLO detector with ONNX model
         
@@ -44,13 +44,18 @@ class YOLOTableDetector:
         dh /= 2
 
         img_resized = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
-        top, bottom = int(dh), int(new_shape[0] - new_unpad[1] - dh)
-        left, right = int(dw), int(new_shape[1] - new_unpad[0] - dw)
+        top, bottom = int(round(dh)), int(round(dh))
+        left, right = int(round(dw)), int(round(dw))
 
+        # Ensure final dimensions are exactly new_shape
         img_padded = cv2.copyMakeBorder(
             img_resized, top, bottom, left, right,
             cv2.BORDER_CONSTANT, value=color
         )
+
+        # Final check: ensure exact dimensions (handle rounding edge cases)
+        if img_padded.shape[0] != new_shape[0] or img_padded.shape[1] != new_shape[1]:
+            img_padded = cv2.resize(img_padded, (new_shape[1], new_shape[0]), interpolation=cv2.INTER_LINEAR)
 
         return img_padded, (r, r), (left, top)
 

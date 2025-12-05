@@ -5,7 +5,6 @@ import '../styles/Footer.css';
 
 const Footer = () => {
   const [healthStatus, setHealthStatus] = useState(null);
-  const [systemInfo, setSystemInfo] = useState(null);
   const [folderStats, setFolderStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,10 +12,10 @@ const Footer = () => {
     fetchSystemData();
     fetchFolderStats();
 
-    // Poll system info and health check every 2 minutes
+    // Poll health check every 2 minutes
     const systemInterval = setInterval(fetchSystemData, 120000);
 
-    // Poll folder stats every 30 seconds (footer doesn't need real-time updates)
+    // Poll folder stats every 30 seconds
     const folderInterval = setInterval(fetchFolderStats, 30000);
 
     return () => {
@@ -27,14 +26,10 @@ const Footer = () => {
 
   const fetchSystemData = async () => {
     try {
-      const [health, system] = await Promise.all([
-        api.healthCheck().catch(() => null),
-        api.getSystemInfo().catch(() => null),
-      ]);
+      const health = await api.healthCheck().catch(() => null);
       setHealthStatus(health);
-      setSystemInfo(system);
     } catch (error) {
-      console.error('Error fetching system data:', error);
+      console.error('Error fetching health status:', error);
     } finally {
       setLoading(false);
     }
@@ -77,40 +72,7 @@ const Footer = () => {
           )}
         </div>
 
-        <div className="footer-section">
-          <div className="footer-title">
-            <Server size={18} />
-            <span>System Info</span>
-          </div>
-          {loading ? (
-            <span className="loading">Loading...</span>
-          ) : systemInfo ? (
-            <div className="status-grid">
-              <div className="status-item">
-                <StatusIcon status={systemInfo.cuda_available} />
-                <span>CUDA ({systemInfo.cuda_device_count || 0} devices)</span>
-              </div>
-              <div className="status-item">
-                <StatusIcon status={systemInfo.tesseract_available} />
-                <span>Tesseract OCR</span>
-              </div>
-              <div className="status-item">
-                <StatusIcon status={systemInfo.ollama_connected} />
-                <span>Ollama LLM</span>
-              </div>
-              <div className="status-item">
-                <StatusIcon status={systemInfo.yolo_model_loaded} />
-                <span>YOLO Model</span>
-              </div>
-              <div className="status-item">
-                <StatusIcon status={systemInfo.poppler_available} />
-                <span>Poppler</span>
-              </div>
-            </div>
-          ) : (
-            <span className="error-text">System info unavailable</span>
-          )}
-        </div>
+        {/* System Info section hidden */}
 
         <div className="footer-section">
           <div className="footer-title">

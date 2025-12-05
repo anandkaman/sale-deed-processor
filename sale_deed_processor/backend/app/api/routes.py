@@ -226,6 +226,22 @@ async def get_processing_stats():
     """Get current processing statistics"""
     return batch_processor.get_stats()
 
+@router.post("/process/toggle-embedded-ocr", response_model=dict)
+async def toggle_embedded_ocr(enabled: bool):
+    """Toggle embedded OCR mode (PyMuPDF vs Poppler+Tesseract)"""
+    try:
+        settings.USE_EMBEDDED_OCR = enabled
+        ocr_mode = "PyMuPDF (Embedded OCR)" if enabled else "Poppler+Tesseract"
+        return {
+            "success": True,
+            "message": f"Embedded OCR mode {'enabled' if enabled else 'disabled'}",
+            "use_embedded_ocr": enabled,
+            "ocr_mode": ocr_mode
+        }
+    except Exception as e:
+        logger.error(f"Toggle embedded OCR error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/process/rerun-failed", response_model=dict)
 async def rerun_failed_pdfs():
     """Move all PDFs from failed folder back to newly_uploaded folder for reprocessing"""
@@ -552,7 +568,8 @@ async def get_system_config():
         "max_workers": settings.MAX_WORKERS,  # Legacy mode
         "llm_backend": settings.LLM_BACKEND,
         "tesseract_lang": settings.TESSERACT_LANG,
-        "poppler_dpi": settings.POPPLER_DPI
+        "poppler_dpi": settings.POPPLER_DPI,
+        "use_embedded_ocr": settings.USE_EMBEDDED_OCR
     }
 
 @router.get("/system/folders", response_model=dict)

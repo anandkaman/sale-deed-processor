@@ -12,15 +12,29 @@ from app.config import settings
 from app.database import init_db
 from app.api.routes import router
 
-# Configure logging
+# Configure logging with UTF-8 support for Kannada text
+import io
+
+# Create UTF-8 StreamHandler for console output
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
+# Create UTF-8 FileHandler for log file
+file_handler = logging.FileHandler('app.log', encoding='utf-8')
+file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('app.log')
-    ]
+    handlers=[console_handler, file_handler]
 )
+
+# Set stdout to UTF-8 mode (for Windows console)
+if sys.platform == 'win32':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        # Python < 3.7 fallback
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 logger = logging.getLogger(__name__)
 

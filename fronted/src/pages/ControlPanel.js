@@ -28,6 +28,7 @@ const ControlPanel = () => {
   const [stage2QueueSize, setStage2QueueSize] = useState(2);  // Stage-2 queue size
   const [enableOcrMultiprocessing, setEnableOcrMultiprocessing] = useState(false);  // OCR multiprocessing
   const [ocrPageWorkers, setOcrPageWorkers] = useState(2);  // OCR page workers
+  const [useEmbeddedOcr, setUseEmbeddedOcr] = useState(false);  // Embedded OCR mode
   const [systemConfig, setSystemConfig] = useState(null);  // System configuration
 
   // Manual tracking for stop button states (always enabled once started)
@@ -68,6 +69,7 @@ const ControlPanel = () => {
         setStage2QueueSize(sysConfig.stage2_queue_size || 2);
         setEnableOcrMultiprocessing(sysConfig.enable_ocr_multiprocessing || false);
         setOcrPageWorkers(sysConfig.ocr_page_workers || 2);
+        setUseEmbeddedOcr(sysConfig.use_embedded_ocr || false);
       }
     } catch (err) {
       console.error('Error fetching system config:', err);
@@ -364,6 +366,22 @@ const ControlPanel = () => {
     }
   };
 
+  const handleToggleEmbeddedOcr = async (enabled) => {
+    try {
+      const response = await api.toggleEmbeddedOcr(enabled);
+      setUseEmbeddedOcr(enabled);
+      setUploadStatus({
+        success: true,
+        message: response.message,
+        type: 'toggle-ocr'
+      });
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to toggle embedded OCR');
+      // Revert the checkbox state on error
+      setUseEmbeddedOcr(!enabled);
+    }
+  };
+
   const ProgressBar = ({ value, max, label }) => {
     const percentage = max > 0 ? (value / max) * 100 : 0;
     return (
@@ -572,6 +590,20 @@ const ControlPanel = () => {
               <span className="setting-hint">(2-4 recommended)</span>
             </div>
           )}
+
+          <div className="worker-control-row">
+            <label className="worker-label">
+              <input
+                type="checkbox"
+                checked={useEmbeddedOcr}
+                onChange={(e) => handleToggleEmbeddedOcr(e.target.checked)}
+                disabled={loading || isPdfProcessingActive}
+                className="checkbox-input"
+              />
+              Use Embedded OCR (PyMuPDF)
+            </label>
+            <span className="setting-hint">(Read embedded text instead of Tesseract OCR)</span>
+          </div>
         </div>
 
         <div className="control-buttons">

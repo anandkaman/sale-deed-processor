@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.config import settings
 from app.services.registration_fee_extractor import RegistrationFeeExtractor
 from app.services.ocr_service import OCRService
+from app.services.pymupdf_reader import PyMuPDFReader
 from app.services.yolo_detector import YOLOTableDetector
 from app.services.llm_service_factory import get_llm_service
 from app.services.validation_service import ValidationService
@@ -41,6 +42,7 @@ class PDFProcessorV2:
             min_fee=settings.MIN_REGISTRATION_FEE
         )
         self.ocr_service = OCRService()
+        self.pymupdf_reader = PyMuPDFReader(max_pages=25)
         self.yolo_detector = YOLOTableDetector(
             model_path=str(settings.YOLO_MODEL_PATH),
             conf_threshold=settings.YOLO_CONF_THRESHOLD
@@ -83,14 +85,18 @@ class PDFProcessorV2:
             if self.batch_processor and not self.batch_processor.is_running:
                 raise ProcessingStoppedException("Stopped before OCR")
 
-            # Step 2: Perform OCR with Tesseract
-            logger.info(f"[{document_id}] Stage1: Performing OCR (max 25 pages)")
-            full_ocr_text = self.ocr_service.get_full_text(str(pdf_path), max_pages=25)
+            # Step 2: Perform OCR - Use PyMuPDF for embedded OCR or Tesseract for traditional OCR
+            if settings.USE_EMBEDDED_OCR:
+                logger.info(f"[{document_id}] Stage1: Reading embedded OCR with PyMuPDF (max 25 pages)")
+                full_ocr_text = self.pymupdf_reader.get_full_text(str(pdf_path), max_pages=25)
+            else:
+                logger.info(f"[{document_id}] Stage1: Performing OCR with Poppler+Tesseract (max 25 pages)")
+                full_ocr_text = self.ocr_service.get_full_text(str(pdf_path), max_pages=25)
 
             if not full_ocr_text or len(full_ocr_text) < 100:
-                raise Exception("OCR returned insufficient text")
+                raise Exception("Text extraction returned insufficient text")
 
-            logger.info(f"[{document_id}] OCR completed: {len(full_ocr_text)} characters")
+            logger.info(f"[{document_id}] Text extraction completed: {len(full_ocr_text)} characters")
 
             # STOP CHECK
             if self.batch_processor and not self.batch_processor.is_running:
@@ -217,11 +223,15 @@ class PDFProcessorV2:
                 logger.info(f"  schedule_c_property_area: {cleaned_data['property_details'].get('schedule_c_property_area')}")
                 logger.info(f"  paid_in_cash_mode: {cleaned_data['property_details'].get('paid_in_cash_mode')}")
 
+            # Store LLM's registration_fee for potential fallback use
+            llm_registration_fee = cleaned_data["property_details"].get("registration_fee")
+
             # Update registration fee if extracted via pdfplumber
             if registration_fee:
                 cleaned_data["property_details"]["registration_fee"] = registration_fee
                 cleaned_data["property_details"]["guidance_value"] = \
                     ValidationService.calculate_guidance_value(registration_fee)
+                logger.info(f"[{document_id}] Using pdfplumber registration fee: {registration_fee}")
 
             # STOP CHECK
             if self.batch_processor and not self.batch_processor.is_running:
@@ -241,16 +251,50 @@ class PDFProcessorV2:
             if self.batch_processor and not self.batch_processor.is_running:
                 raise ProcessingStoppedException("Stopped before YOLO")
 
-            # Step 6: If registration fee not found, run YOLO detection
+            # Step 6: If registration fee not found via pdfplumber, run YOLO detection
             if not registration_fee:
-                logger.info(f"[{document_id}] Stage2: Running YOLO detection")
+                logger.info(f"[{document_id}] Stage2: pdfplumber failed, running YOLO detection")
                 table_detected = self._detect_and_save_table(pdf_path, document_id)
                 result["table_detected"] = table_detected
 
                 if table_detected:
-                    logger.info(f"[{document_id}] Table detected and saved")
+                    logger.info(f"[{document_id}] YOLO table detected and saved for vision processing")
                 else:
-                    logger.warning(f"[{document_id}] No table detected")
+                    logger.warning(f"[{document_id}] YOLO failed to detect table")
+
+                    # Step 7: If YOLO also failed, use LLM's registration fee as final fallback
+                    if llm_registration_fee:
+                        logger.info(f"[{document_id}] Using LLM registration fee as fallback: {llm_registration_fee}")
+                        try:
+                            # Update database with LLM registration fee
+                            from app.models import PropertyDetail
+                            prop = db.query(PropertyDetail).filter(PropertyDetail.document_id == document_id).first()
+                            if prop:
+                                # Convert to float if it's a string
+                                try:
+                                    llm_reg_fee_value = float(llm_registration_fee) if isinstance(llm_registration_fee, str) else llm_registration_fee
+
+                                    # Format and save
+                                    if llm_reg_fee_value == int(llm_reg_fee_value):
+                                        prop.registration_fee = str(int(llm_reg_fee_value))
+                                    else:
+                                        prop.registration_fee = f"{llm_reg_fee_value:.2f}"
+
+                                    # Calculate and save guidance value
+                                    guidance_value = ValidationService.calculate_guidance_value(llm_reg_fee_value)
+                                    if guidance_value == int(guidance_value):
+                                        prop.guidance_value = str(int(guidance_value))
+                                    else:
+                                        prop.guidance_value = f"{guidance_value:.2f}"
+
+                                    db.commit()
+                                    logger.info(f"[{document_id}] Updated DB with LLM registration fee: {prop.registration_fee}")
+                                except (ValueError, TypeError) as e:
+                                    logger.error(f"[{document_id}] Failed to convert LLM registration fee: {e}")
+                        except Exception as llm_update_error:
+                            logger.error(f"[{document_id}] Failed to update LLM registration fee in DB: {llm_update_error}")
+                    else:
+                        logger.warning(f"[{document_id}] No registration fee available from any source (pdfplumber, YOLO, LLM)")
 
             # Step 7: Move to processed folder
             result["status"] = "success"

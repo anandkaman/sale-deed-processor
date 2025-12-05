@@ -24,11 +24,13 @@ CRITICAL REQUIREMENTS:
    - Schedule C property name (Apartment/property name or number).
    - Schedule C property address (Complete property address/description).
    - Schedule C property area in square feet (Super built-up area preferred, return as float).
+   - if schedule b or c is not mentioned just add mentioned property details to schedule c property address and area.
    - *Pincode: **STRICTLY extracted only from the Schedule C property address/description related to property being sold.*
    - State (from property details section)
-   - Sale consideration amount (numeric value only)
-   - Stamp duty fee (numeric value only, DO NOT extract registration fee)
-   - Paid in cash mode: Extract full cash <amount> and exclude "Rs","/-" (comes after DEED OF ABSOLUTE SALE WITNESSETH) ONLY if explicitly mentioned. Example: 'a sum of Rs.500/- (Rupees Five Hundred Only) paid by way of Cash;' *STRICT RULE: Return null if NO explicit cash payment is found.*
+   - Sale consideration amount or property sold amount (numeric value only)
+   - Stamp duty fee (numeric value only, you may find near ಮುದ್ರಾಂಕ ಶುಲ್ಕ in Kannada)
+   - Registration fee (numeric value only, sometimes mentioned as "ನೋಂದಣಿ ಶುಲ್ಕ" or "ನೊಂದಣಿ ಉದ್ದೇಶಕ್ಕಾಗಿ" in Kannada). *IMPORTANT: Try your best to extract this value*
+   - Paid in cash mode: Extract full cash ONLY if explicitly mentioned and it is way of buyer paying some amount of cash in total to sale consideration. Example: 'a sum of Rs.500/- (Rupees Five Hundred Only) paid by way of Cash;' *STRICT RULE: Return null if NO explicit cash payment is found and retun numarical value.*
 
 4. DOCUMENT DETAILS:
    - Transaction date
@@ -80,7 +82,8 @@ Return *ONLY valid JSON* in this exact structure:
     "pincode": "string or null",
     "state": "string or null",
     "sale_consideration": "string or null",
-    "stamp_duty_fee": "string or null"
+    "stamp_duty_fee": "string or null",
+    "registration_fee": "string or null"
   },
   "document_details": {
     "transaction_date": "string or null",

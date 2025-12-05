@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     
     # YOLO Model
     YOLO_MODEL_PATH: Path = MODELS_DIR / "table1.19.1.onnx"
-    YOLO_CONF_THRESHOLD: float = 0.65
+    YOLO_CONF_THRESHOLD: float = 0.80
     
     # Tesseract
     TESSERACT_LANG: str = "eng+kan"
@@ -63,7 +63,7 @@ class Settings(BaseSettings):
 
     # Gemini Configuration (Google Cloud API)
     USE_GEMINI: bool = True
-    GEMINI_API_KEY: str = ""  # Add your Gemini API key here or set via environment variable
+    GEMINI_API_KEY: str = "AIzaSyBA6vJhyqYp1dZ92A4MphoqOxxCIo7MVfc"  # Add your Gemini API key here or set via environment variable
     GEMINI_MODEL: str = "gemini-2.5-flash-lite"
     GEMINI_VISION_MODEL: str = "gemini-2.5-flash-lite"  # Gemini Flash Lite supports vision
 
@@ -84,6 +84,9 @@ class Settings(BaseSettings):
 
     # OCR Registration Fee Extraction (Backup extraction from OCR text)
     ENABLE_OCR_REG_FEE_EXTRACTION: bool = False  # Enable extraction of registration fee from OCR text (fallback when pdfplumber fails)
+
+    # Embedded OCR Mode (PyMuPDF)
+    USE_EMBEDDED_OCR: bool = False  # Enable PyMuPDF to read embedded OCR instead of Poppler+Tesseract
 
     # Legacy Processing (Version 1)
     MAX_WORKERS: int = 2          # Used only if ENABLE_PIPELINE = False

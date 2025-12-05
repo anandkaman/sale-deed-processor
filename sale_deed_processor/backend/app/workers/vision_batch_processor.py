@@ -160,8 +160,12 @@ class VisionBatchProcessor:
             # Extract registration fee using vision model
             reg_fee = self.vision_service.extract_registration_fee(str(image_path))
 
-            if reg_fee and ValidationService.validate_registration_fee(reg_fee):
+            # Vision model exception: Accept any positive value (no MIN_REGISTRATION_FEE check)
+            # Vision can extract values from bad prints that would otherwise be rejected
+            if reg_fee and reg_fee > 0:
                 result["registration_fee"] = reg_fee
+                if reg_fee < settings.MIN_REGISTRATION_FEE:
+                    logger.info(f"Vision extracted fee {reg_fee} is below MIN threshold ({settings.MIN_REGISTRATION_FEE}), but accepting anyway (vision exception)")
 
                 # Check again before database update
                 if not self.is_running:
